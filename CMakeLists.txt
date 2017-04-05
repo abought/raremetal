@@ -75,14 +75,13 @@ add_library(libraremetal
             libRareMetal/src/MathNormal.h
             libRareMetal/src/MathSVD.cpp
             libRareMetal/src/MathSVD.h
-            #libRareMetal/src/Rmath.h
+            libRareMetal/src/Rmath.h
             libRareMetal/src/TraitTransformations.cpp
             libRareMetal/src/TraitTransformations.h
             libRareMetal/mvtnorm/mvt.f)
 
 set_target_properties(libraremetal PROPERTIES OUTPUT_NAME raremetal)
-target_include_directories(libraremetal PUBLIC libRareMetal/include)
-target_include_directories(libraremetal PRIVATE libRareMetal/src)
+target_include_directories(libraremetal PUBLIC libRareMetal/pdf libRareMetal/src)
 target_link_libraries(libraremetal statgen)
 if(APPLE)
     target_link_libraries(libraremetal ${CMAKE_SOURCE_DIR}/libRareMetal/libRMath_MAC.a)
