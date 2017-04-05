@@ -20,6 +20,7 @@
 
 #include <vector>
 #include <set>
+#include <unordered_set>
 #include <string>
 #include "VcfHeader.h"
 

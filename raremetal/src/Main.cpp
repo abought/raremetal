@@ -27,7 +27,7 @@
 int main(int argc, char ** argv)
 {
 	printf("\nRAREMETAL %s -- A Tool for Rare Variants Meta-Analyses for Quantitative Traits\n"
-		"          (c) 2012-2017 Shuang Feng, Dajiang Liu, Sai Chen, Goncalo Abecasis\n\n",VERSION);
+		"          (c) 2012-2017 Shuang Feng, Dajiang Liu, Sai Chen, Goncalo Abecasis\n\n", VERSION);
 	printf("\nPlease go to \"http://genome.sph.umich.edu/wiki/RAREMETAL\" for the newest version.\n");
 	PhoneHome::allThinning = 100;
 	time_t initialTime = time(0);

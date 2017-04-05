@@ -22,6 +22,7 @@
 #include <iostream>
 #include <cstring>
 #include <stdint.h>
+#include <string>
 
 #include "FileType.h"
 

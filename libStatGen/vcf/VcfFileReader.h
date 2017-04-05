@@ -25,6 +25,7 @@
 #include "VcfRecordDiscardRules.h"
 #include "VcfSubsetSamples.h"
 #include "Tabix.h"
+#include <string>
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
 #include <unordered_set>

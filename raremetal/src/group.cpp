@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <time.h>
 #include "Error.h"
-#include "StringBasic.h"
+#include "StringBasics.h"
 
 int main(int argc, char ** argv)
 {
