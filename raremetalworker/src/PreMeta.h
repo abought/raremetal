@@ -25,6 +25,8 @@
 #include "InputFile.h"
 #include "GroupFromAnnotation.h"
 #include "DataQC.h"
+#include "savvy/savvy.hpp"
+
 #include <vector>
 #include <map>
 #include <string>
@@ -68,9 +70,11 @@ public:
       int warnings;
       int numFounders;
       int malehwewarning;
-      VcfFileReader reader;
-      VcfHeader header;
-      VcfRecord record;
+      savvy::indexed_reader reader;
+      savvy::dense_allele_vector<float> record;
+      //VcfFileReader reader;
+      //VcfHeader header;
+      //VcfRecord record;
 
       //this is the position of each marker in a gene for output
       int pos,hom1,het,hom2;

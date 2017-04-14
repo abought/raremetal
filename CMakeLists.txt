@@ -1,23 +1,33 @@
 cmake_minimum_required(VERSION 3.2)
 project(raremetal VERSION 4.14.0 LANGUAGES C CXX Fortran)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 
 message("Installing dependencies ... ")
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/dep)
-execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_SOURCE_DIR}/dep WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/dep)
+execute_process(COMMAND ${CMAKE_COMMAND} -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/dep WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/dep)
 execute_process(COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR}/dep WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/dep RESULT_VARIABLE build_result)
 if(build_result)
     message(FATAL_ERROR "Dependency installation failed.")
 endif()
 message("Done installing dependencies ... ")
 
+include_directories(${CMAKE_BINARY_DIR}/include)
+link_directories(${CMAKE_BINARY_DIR}/lib)
+
 add_library(statgen STATIC IMPORTED)
 set_property(TARGET statgen PROPERTY IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/dep/libstatgen_project-prefix/src/libstatgen_project/libStatGen.a)
 set_property(TARGET statgen APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_BINARY_DIR}/dep/libstatgen_project-prefix/src/libstatgen_project/include)
 
-include_directories(/Users/jonathonl/Downloads/Rcpp/inst/include)
-link_directories(/opt/local/Library/Frameworks/R.framework/Resources/lib)
+list(APPEND CMAKE_PREFIX_PATH "${CMAKE_BINARY_DIR}")
+find_package(libsavvy CONFIG REQUIRED)
+
+#add_library(savvy STATIC IMPORTED)
+#set_property(TARGET savvy PROPERTY IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/dep/libvc_project-prefix/src/libvc_project-build/libsavvy.a)
+#set_property(TARGET savvy APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_BINARY_DIR}/dep/libvc_project-prefix/src/libvc_project/include)
+
+#include_directories(/Users/jonathonl/Downloads/Rcpp/inst/include)
+#link_directories(/opt/local/Library/Frameworks/R.framework/Resources/lib)
 
 add_library(libraremetal
             libRareMetal/mvtnorm/randomF77.c
@@ -164,7 +174,7 @@ add_executable(raremetalworker
                raremetalworker/src/WritePDF.h)
 
 target_include_directories(raremetalworker PRIVATE otherLib/eigen-3.2.0)
-target_link_libraries(raremetalworker libraremetal z)
+target_link_libraries(raremetalworker libraremetal z savvy)
 target_compile_definitions(raremetalworker PRIVATE VERSION="${PROJECT_VERSION}" __ZLIB_AVAILABLE__)
 
 #set(SOURCE_FILES

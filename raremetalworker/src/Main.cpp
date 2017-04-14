@@ -29,7 +29,7 @@
 #include "PreMeta.h"
 #include "OutputKin.h"
 #include "WriteLog.h"
-#include "BgzfFileType.h"
+//#include "BgzfFileType.h"
 //#include <lapacke.h>
 #include "DataQC.h"
 #include "AutoFit2.h"
@@ -117,7 +117,10 @@ int main(int argc, char ** argv)
     PhoneHome::checkVersion("raremetalworker",VERSION);
 
     if(noeof) // Set that the eof block is not required.
-        BgzfFileType::setRequireEofBlock(false);
+		{
+			//TODO: Port to savvy
+			//BgzfFileType::setRequireEofBlock(false);
+		}
 
 
     if (FastFit::makeResiduals && FastFit::binary)
