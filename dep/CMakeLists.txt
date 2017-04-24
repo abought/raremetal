@@ -13,7 +13,7 @@ ExternalProject_Add(libstatgen_project
                     BUILD_COMMAND make
                     INSTALL_COMMAND "") #make "DESTDIR=${CMAKE_INSTALL_PREFIX}" install)
 
-ExternalProject_Add(libvc_project
-                    GIT_REPOSITORY "https://github.com/statgen/libvc"
-                    GIT_TAG "master"
-                    CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}")
+#ExternalProject_Add(libvc_project
+#                    GIT_REPOSITORY "https://github.com/statgen/libvc"
+#                    GIT_TAG "master"
+#                    CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}")

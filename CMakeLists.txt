@@ -173,6 +173,7 @@ add_executable(raremetalworker
                raremetalworker/src/WritePDF.cpp
                raremetalworker/src/WritePDF.h)
 
+
 target_include_directories(raremetalworker PRIVATE otherLib/eigen-3.2.0)
 target_link_libraries(raremetalworker libraremetal z savvy)
 target_compile_definitions(raremetalworker PRIVATE VERSION="${PROJECT_VERSION}" __ZLIB_AVAILABLE__)

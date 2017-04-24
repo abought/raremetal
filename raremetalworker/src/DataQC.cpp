@@ -56,47 +56,34 @@ void SanityCheck::Check(Pedigree & ped, FILE * log)
    //DAT file is checked in PreMeta.cpp
 
    //STEP 2: summarizing VCF file.
-   VcfFileReader reader;
-   VcfHeader header;
-   VcfRecord record;
 
    int vcf_marker_num=0;
    if(PreMeta::vcfInput !="")
    {
 
-      String tabixName = PreMeta::vcfInput + ".tbi";
+     savvy::reader tmp_reader(PreMeta::vcfInput.c_str());
+     savvy::dense_allele_vector<float> record;
 
-      Tabix * myVcfIndex;
-      myVcfIndex = new Tabix();
-      StatGenStatus::Status indexStat = myVcfIndex->readIndex(tabixName.c_str());
 
-      if(indexStat != StatGenStatus::SUCCESS)
+      if(!tmp_reader)
       {
 	 fprintf(log,"FATAL ERROR! Either VCF does not exist or VCF file has to be tabix indexed. Bgzip your vcf file, then use \"tabix -p vcf your.vcf.gz\" to index.\n");
 	 error("Either VCF does not exist or VCF file has to be tabix indexed. Bgzip your vcf file, then use \"tabix -p vcf your.vcf.gz\" to index.\n");
       }
 
-      reader.open(PreMeta::vcfInput,header);
-      reader.readVcfIndex();
-      const Tabix* indexPtr = reader.getVcfIndex();
-      if(indexPtr == NULL)
+
+     savvy::reader reader(PreMeta::vcfInput.c_str());
+      for(const std::string& chrm : reader.chromosomes())
       {
-	 // HANDLE CASE OF FAILING TO GET THE INDEX.
-	 fprintf(log,"FATAL ERROR! VCF file has to be tabix indexed. bgzip your vcf file then use tabix -p vcf your.vcf.gz to tabix.\n");
-	 error("VCF file has to be tabix indexed. bgzip your vcf file then use tabix -p vcf your.vcf.gz to tabix.\n");
-      }
-      for(int i = 0; i < indexPtr->getNumRefs(); i++)
-      {
-	 chromosomeVCF.Push(indexPtr->getRefName(i));
+	 chromosomeVCF.Push(chrm.c_str());
       }
 
       //check if VCF file is empty
-      while(reader.readRecord(record))
+      while(reader >> record)
       {
 	 vcf_marker_num++;
 	 break;
       }
-      reader.close();
 
       if(vcf_marker_num>0) 
 	 PreMeta::genoFromVCF=true;
@@ -188,18 +175,16 @@ void SanityCheck::Check(Pedigree & ped, FILE * log)
 	    pedSampleID.SetInteger(ped[s].pid,s);
       }
 
-      reader.open(PreMeta::vcfInput,header);
-      int numSamples = header.getNumSamples();
-      for(int s=0;s<numSamples;s++)
+      savvy::reader reader(PreMeta::vcfInput.c_str());
+      int numSamples = reader.samples_end() - reader.samples_begin();
+      for(auto it = reader.samples_begin(); it != reader.samples_end(); ++it)
       {
-	 const char * sample = header.getSampleName(s);
-	 if(pedSampleID.Integer(sample)>=0)
+	 if(pedSampleID.Integer(it->c_str())>=0)
 	 {
 	    status=true;
 	    break;
 	 }
       }
-      reader.close();
       if(!status)
       {
 	 fprintf(log,"ERROR! There is no overlapping sample ID between PED and VCF file. Please double check to make sure that PED file and VCF file have some or all sample IDs matched.\n");
