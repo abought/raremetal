@@ -79,44 +79,42 @@ void FastTransform::SelectSamplesPED(Pedigree & ped,bool useCovariates)
 void FastTransform::SelectSamplesVCF(Pedigree & ped,bool useCovariates)
 {
 	// printf("Selecting useful samples ...\n");
-	VcfFileReader reader;
-	VcfHeader header;
-	VcfRecord record;
-	reader.open(PreMeta::vcfInput,header);
-	int numSamples = header.getNumSamples();
+	savvy::reader reader(PreMeta::vcfInput.c_str());
+	savvy::dense_allele_vector<float> record;
+	int numSamples = reader.samples_end() - reader.samples_begin();
 	totalN=numSamples;
-	reader.close();
 
 	StringIntHash VCFID;
-	for(int s=0;s<numSamples;s++) {
-		const char * sample = header.getSampleName(s);
-		VCFID.SetInteger(sample,s);
+	for(auto s = reader.samples_begin(); s != reader.samples_end(); ++s) {
+		VCFID.SetInteger(s->c_str(), s - reader.samples_begin());
 	}
 
 	// now see if each sample is genotyped in at least one site
 	std::map<int, bool> g1; // store the samples that haven't found a genotyped site
 	for(int s=0; s<numSamples; s++)
 		g1[s] = 0;
-	reader.open(PreMeta::vcfInput,header);
-	while(reader.readRecord(record)) {
+
+	while(reader >> record) {
 		if (g1.empty())
 			break;
-		VcfRecordGenotype & genoInfo = record.getGenotypeInfo();
+
 		std::map<int, bool> to_remove;
 		for(std::map<int, bool>::iterator t=g1.begin(); t!=g1.end(); t++) {
 			int s = t->first;
 			if(PreMeta::dosage) {
+#ifdef SUPPORT_DOSAGE
 				const std::string * geno = genoInfo.getString(PreMeta::dosageFlag.c_str(),s);
 				if(!geno)
 					error("cannot find dosage at \"%s\" in VCF!",PreMeta::dosageFlag.c_str());
 				if(*geno != ".")
 					to_remove[s] = 1;
+#endif
 			}
 			else { // gt
-				int numGTs = record.getNumGTs(s);
+				int numGTs = savvy::get_ploidy(reader, record);
 				bool bad = 0;
 				for(int j = 0; j < numGTs; j++) {
-					if(record.getGT(s,j) == VcfGenotypeSample::MISSING_GT) {
+					if(std::isnan(record[s * numGTs + j])) {
 						bad = 1;
 						break;
 					}
@@ -128,7 +126,7 @@ void FastTransform::SelectSamplesVCF(Pedigree & ped,bool useCovariates)
 		for(std::map<int, bool>::iterator pm=to_remove.begin(); pm!=to_remove.end(); pm++)
 			g1.erase(pm->first);
 	}
-	reader.close();
+
 	// now g1 has index of samples that are not genotyped
 	for(int i=0; i<ped.count; i++) {
 		bool phenotyped =false;

@@ -652,16 +652,15 @@ void KinshipEmp::WriteKinship(Pedigree & ped,Matrix & allPairs, IntArray & genot
   if(VCF)
   {
     file = ifopen(filename, "wt", InputFile::GZIP);
-    VcfFileReader reader;
-    VcfHeader header;
-    reader.open(PreMeta::vcfInput,header);
+
+    savvy::reader reader(PreMeta::vcfInput.c_str());
     for (int i = 0; i < n; i++)
     {
-      const char * sample = header.getSampleName(genotypedSample[i]);
-      ifprintf(file,"%s ",sample);
+      auto sample_it = reader.samples_begin() + genotypedSample[i];
+      ifprintf(file,"%s ", sample_it->c_str());
     }
     ifprintf(file,"\n");
-    reader.close();
+
     for(int r=0; r<n; r++)
     {
       for(int c=0; c<=r; c++)
@@ -887,12 +886,9 @@ void KinshipEmp::SetupVCFX(Pedigree & ped, IntArray & genotypedSampleVCF, String
   printf("Calculating empirical kinshipX matrix ...");
   fflush(stdout);
   fprintf(log,"Calculating empirical kinshipX matrix ...");
-  VcfFileReader reader;
-  VcfHeader header;
-  VcfRecord record;
-  reader.open(PreMeta::vcfInput,header);
-  reader.readVcfIndex();
-  reader.setReadSection(PreMeta::xLabel.c_str());
+
+  savvy::indexed_reader reader(PreMeta::vcfInput.c_str(), {PreMeta::xLabel.c_str()});
+  savvy::dense_allele_vector<float> record;
 
   int N=0;
   int total_n = genotypedSampleVCF.Length();
@@ -915,6 +911,7 @@ void KinshipEmp::SetupVCFX(Pedigree & ped, IntArray & genotypedSampleVCF, String
   int n_=0, nmiss=0;
   if(PreMeta::dosage)
   {
+#ifdef SUPPORT_DOSAGE
     while(reader.readRecord(record))
     {
       chr = record.getChromStr();
@@ -980,15 +977,16 @@ void KinshipEmp::SetupVCFX(Pedigree & ped, IntArray & genotypedSampleVCF, String
       }
       if(genotype) delete [] genotype;
     }
+#endif
   }
   else
   {
-    while(reader.readRecord(record))
+    while(reader >> record)
     {
-      pos = record.get1BasedPosition();
+      pos = record.locus();
       if(pos<PreMeta::Xstart || pos>PreMeta::Xend)
         continue;
-      chr = record.getChromStr();
+      chr = record.chromosome().c_str();
       double * genotype = new double [total_n];
       for(int p=0;p<total_n;p++)
       {
@@ -1011,7 +1009,7 @@ void KinshipEmp::SetupVCFX(Pedigree & ped, IntArray & genotypedSampleVCF, String
       {
         bool skip=false;
         int i= genotypedSampleVCF[s];
-        int numGTs = record.getNumGTs(i);
+        int numGTs = savvy::get_ploidy(reader, record);
 
         const char * sample = header.getSampleName(i);
         int ped_idx = samplePEDIDHash.Integer(sample);
@@ -1022,8 +1020,8 @@ void KinshipEmp::SetupVCFX(Pedigree & ped, IntArray & genotypedSampleVCF, String
           for(int j = 0; j < numGTs; j++)
           {
             //if marker is not biallelic, skip this marker
-            int a = record.getGT(i,j);
-            if(a>1)
+            float a = record[i * numGTs + j];
+            if(!std::isnan(a) && a>1)
             {
               skipSNP=true;
               warnings++;
@@ -1122,8 +1120,8 @@ void KinshipEmp::SetupVCFX(Pedigree & ped, IntArray & genotypedSampleVCF, String
         {
           for(int j = 0; j < numGTs; j++)
           {
-            int a = record.getGT(i,j);
-            if(a==VcfGenotypeSample::MISSING_GT)
+            float a = record[i * numGTs + j];
+            if(std::isnan(a))
             {
               nmiss++;
               if(nmiss>NMISS)
