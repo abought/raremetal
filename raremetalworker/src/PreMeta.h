@@ -21,7 +21,7 @@
 #include "FastFit.h"
 #include "VcfRecord.h"
 #include "VcfFileReader.h"
-#include "VcfHeader.h"
+//#include "VcfHeader.h"
 #include "InputFile.h"
 #include "GroupFromAnnotation.h"
 #include "DataQC.h"

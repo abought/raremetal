@@ -3,7 +3,7 @@
 #include "Error.h"
 #include "VcfRecord.h"
 #include "VcfFileReader.h"
-#include "VcfHeader.h"
+//#include "VcfHeader.h"
 #include "PreMeta.h"
 
 SanityCheck::SanityCheck() {}

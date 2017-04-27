@@ -1011,8 +1011,8 @@ void KinshipEmp::SetupVCFX(Pedigree & ped, IntArray & genotypedSampleVCF, String
         int i= genotypedSampleVCF[s];
         int numGTs = savvy::get_ploidy(reader, record);
 
-        const char * sample = header.getSampleName(i);
-        int ped_idx = samplePEDIDHash.Integer(sample);
+        std::string sample = *(reader.samples_begin() + i);
+        int ped_idx = samplePEDIDHash.Integer(sample.c_str());
 
         if(ped[ped_idx].sex==PreMeta::maleLabel)
         {
@@ -1069,10 +1069,10 @@ void KinshipEmp::SetupVCFX(Pedigree & ped, IntArray & genotypedSampleVCF, String
               nmiss++;
               skip =true;
               warnings++;
-              fprintf(log,"Warning: genotype of sample %s of variant %s is set to be missing because male genotype on non-pseudo-autosomal region of chr X can not be heterozygous.\n",sample,SNPname.c_str());
+              fprintf(log,"Warning: genotype of sample %s of variant %s is set to be missing because male genotype on non-pseudo-autosomal region of chr X can not be heterozygous.\n",sample.c_str(),SNPname.c_str());
               if(warnings<20)
               {
-                printf("Warning: genotype of sample %s of variant %s is set to be missing because male genotype on non-pseudo-autosomal region of chr X can not be heterozygous.\n",sample,SNPname.c_str());
+                printf("Warning: genotype of sample %s of variant %s is set to be missing because male genotype on non-pseudo-autosomal region of chr X can not be heterozygous.\n",sample.c_str(),SNPname.c_str());
               }
               if(nmiss>NMISS)
               {
