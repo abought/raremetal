@@ -15,6 +15,8 @@ message("Done installing dependencies ... ")
 include_directories(${CMAKE_SOURCE_DIR}/cget/include)
 link_directories(${CMAKE_SOURCE_DIR}/cget/lib)
 
+find_package(Threads)
+
 add_library(statgen STATIC IMPORTED)
 set_property(TARGET statgen PROPERTY IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/dep/libstatgen_project-prefix/src/libstatgen_project/libStatGen.a)
 set_property(TARGET statgen APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_BINARY_DIR}/dep/libstatgen_project-prefix/src/libstatgen_project/include)
@@ -92,7 +94,7 @@ add_library(libraremetal
 
 set_target_properties(libraremetal PROPERTIES OUTPUT_NAME raremetal)
 target_include_directories(libraremetal PUBLIC libRareMetal/pdf libRareMetal/src)
-target_link_libraries(libraremetal statgen)
+target_link_libraries(libraremetal statgen ${CMAKE_THREAD_LIBS_INIT})
 if(APPLE)
     target_link_libraries(libraremetal ${CMAKE_SOURCE_DIR}/libRareMetal/libRMath_MAC.a)
 elseif(UNIX)
