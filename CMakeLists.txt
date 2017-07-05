@@ -12,14 +12,14 @@ if(build_result)
 endif()
 message("Done installing dependencies ... ")
 
-include_directories(${CMAKE_BINARY_DIR}/include)
-link_directories(${CMAKE_BINARY_DIR}/lib)
+include_directories(${CMAKE_SOURCE_DIR}/cget/include)
+link_directories(${CMAKE_SOURCE_DIR}/cget/lib)
 
 add_library(statgen STATIC IMPORTED)
 set_property(TARGET statgen PROPERTY IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/dep/libstatgen_project-prefix/src/libstatgen_project/libStatGen.a)
 set_property(TARGET statgen APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_BINARY_DIR}/dep/libstatgen_project-prefix/src/libstatgen_project/include)
 
-list(APPEND CMAKE_PREFIX_PATH "${CMAKE_BINARY_DIR}")
+list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/cget")
 find_package(libsavvy CONFIG REQUIRED)
 
 #add_library(savvy STATIC IMPORTED)

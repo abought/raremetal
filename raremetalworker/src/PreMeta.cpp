@@ -744,7 +744,7 @@ void PreMeta::runGenoFromVcf(Pedigree & ped, FastTransform & trans, FastFit & en
   int range_end;
   if (Region == "")
   {
-    savvy::reader tmp_reader(vcfInput.c_str());
+    savvy::indexed_reader tmp_reader(vcfInput.c_str(), {"", 0, 0});
     if (tmp_reader.good())
       chromosomes = tmp_reader.chromosomes();
   }
@@ -795,7 +795,7 @@ void PreMeta::runGenoFromVcf(Pedigree & ped, FastTransform & trans, FastFit & en
           current_cov_var = current_score_var;
           int last_end = varList[chr_str][(int) varList[chr_str].size() - 1] + window + 1;
           reader.reset_region({chr_str, (unsigned)current_score_var, (unsigned)last_end});
-          if (reader >> record)
+          if (readNextVariantRecord())
           {
             current_score_index = ii;
             current_cov_index = ii;
@@ -1016,7 +1016,7 @@ void PreMeta::runGenoFromVcf(Pedigree & ped, FastTransform & trans, FastFit & en
               genotypeAll_dom[genotypeAll_dom.rows - 1][i] = transGeno_dom[i];
           }
         }
-      } while(reader >> record);
+      } while(readNextVariantRecord());
       //output the LD matrix for the rest of the markers in genotypeAll
       int markers = genotypeAll.rows;
       for (int i = 0; i < markers; i++)
@@ -1180,14 +1180,14 @@ pdf.CloseFile();
 
 bool PreMeta::GetGenotypeVectorVCFDosage(FastTransform & trans, Pedigree & ped)
 {
-
+ savvy::dense_dosage_vector<float>& dosage_record = dynamic_cast<savvy::dense_dosage_vector<float>&>(variant_record);
  bool status = false;
-#ifdef SUPPORT_DOSAGE
+
  founderMaf = markerMaf = 0.0;
- rareAllele = record.getAltStr();
- refAllele = record.getRefStr();
- chr = record.getChromStr();
- pos = record.get1BasedPosition();
+ rareAllele = dosage_record.alt().c_str();
+ refAllele = dosage_record.ref().c_str();
+ chr = dosage_record.chromosome().c_str();
+ pos = dosage_record.locus();
 
  if(refAllele=="."||rareAllele==".")
   return status;
@@ -1195,7 +1195,7 @@ bool PreMeta::GetGenotypeVectorVCFDosage(FastTransform & trans, Pedigree & ped)
 int n=0,nf=0;
 double fmaf = 0.0, maf=0.0;
 founderMaf = markerMaf = 0.0;
-VcfRecordGenotype & genoInfo = record.getGenotypeInfo();
+//VcfRecordGenotype & genoInfo = dosage_record.getGenotypeInfo();
    /*
       bool XStatus = false;
       if(chr==xLabel && pos>=Xstart && pos<=Xend)
@@ -1229,11 +1229,10 @@ VcfRecordGenotype & genoInfo = record.getGenotypeInfo();
         error("ERROR! Check sample from VCF and PED file.\n",sample.c_str());
       if(s!=-1)
       {
-        const std::string * geno = genoInfo.getString(dosageFlag.c_str(),s);
-        if(strcmp((*geno).c_str(),".")>0)
+        float geno = dosage_record[s];
+        if(!std::isnan(geno))
         {
-         float dose = atof((*geno).c_str());
-         genotype[idx] = dose;
+         genotype[idx] = geno;
 	       /*
 		  if(XStatus && ped[trans.samplePEDIDHash.Integer(sample)].sex==maleLabel && dose >0)
 		  {
@@ -1245,7 +1244,7 @@ VcfRecordGenotype & genoInfo = record.getGenotypeInfo();
       int founder = trans.foundersHash.Integer(sample);
       if(founder!=-1)
       {
-        fmaf+=dose;
+        fmaf+=geno;
         nf++;
       }
     }
@@ -1334,20 +1333,21 @@ else
 callRate = 1.0-(double) nmiss/trans.persons;
 hwe_pvalue = 1.0;
 het=0; hom1=0; hom2=0;
-#endif //SUPPORT_DOSAGE
+
 return status;
 }
 
 bool PreMeta::GetGenotypeVectorVCF(FastTransform & trans, Pedigree & ped,SanityCheck & checkData,FILE * log)
 {
-  const std::uint16_t ploidy = savvy::get_ploidy(reader, record);
+  savvy::dense_allele_vector<float>& gt_record = dynamic_cast<savvy::dense_allele_vector<float>&>(variant_record);
+  const std::uint16_t ploidy = savvy::get_ploidy(reader, gt_record);
   bool status = false;
 
   founderMaf = markerMaf = 0.0;
-  chr = record.chromosome().c_str();
-  pos = record.locus();
-  rareAllele = record.alt().c_str();
-  refAllele = record.ref().c_str();
+  chr = gt_record.chromosome().c_str();
+  pos = gt_record.locus();
+  rareAllele = gt_record.alt().c_str();
+  refAllele = gt_record.ref().c_str();
 
   if(checkData.skippedSNPs.Integer(chr + ":" + pos)!=-1)
     return status;
@@ -1397,7 +1397,7 @@ bool PreMeta::GetGenotypeVectorVCF(FastTransform & trans, Pedigree & ped,SanityC
       if(XStatus && ped[trans.samplePEDIDHash.Integer(sample)].sex==maleLabel)
       {
         if(numGTs==1) {
-          float a = record[s * ploidy + j];
+          float a = gt_record[s * ploidy + j];
           if(std::isnan(a))
             miss_stat=true;
           else {
@@ -1416,7 +1416,7 @@ bool PreMeta::GetGenotypeVectorVCF(FastTransform & trans, Pedigree & ped,SanityC
           int malemissing=0;
           float a;
           for(int j = 0; j < numGTs; j++) {
-            a = record[s * ploidy + j]; //record.getGT(s,j);
+            a = gt_record[s * ploidy + j]; //record.getGT(s,j);
             if(std::isnan(a))
               malemissing++;
             else
@@ -1451,7 +1451,7 @@ bool PreMeta::GetGenotypeVectorVCF(FastTransform & trans, Pedigree & ped,SanityC
       }
       else {
         for(int j = 0; j < numGTs; j++) {
-          float a = record[s * ploidy + j];
+          float a = gt_record[s * ploidy + j];
           if(std::isnan(a)) {
             numMiss++;
             genotype[idx] = -1.0f;
@@ -2101,6 +2101,13 @@ void PreMeta::updateCovVar( std::string & chr_str, int & current_cov_var, int & 
     current_cov_var = 2000000000;
   else
     current_cov_var = varList[chr_str][current_cov_index];
+}
+
+bool PreMeta::readNextVariantRecord()
+{
+  if (dosage)
+    return (reader >> dynamic_cast<savvy::dense_dosage_vector<float>&>(variant_record)).good();
+  return (reader >> dynamic_cast<savvy::dense_allele_vector<float>&>(variant_record)).good();
 }
 
 

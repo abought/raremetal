@@ -74,100 +74,14 @@ void FastTransform::SelectSamplesPED(Pedigree & ped,bool useCovariates)
 	}
 }
 
-
-// 07/08/16 update: read vcf once instead of multiple times
-void FastTransform::SelectSamplesVCF(Pedigree & ped,bool useCovariates)
-{
-	// printf("Selecting useful samples ...\n");
-	savvy::reader reader(PreMeta::vcfInput.c_str());
-	savvy::dense_allele_vector<float> record;
-	int numSamples = reader.samples_end() - reader.samples_begin();
-	totalN=numSamples;
-
-	StringIntHash VCFID;
-	for(auto s = reader.samples_begin(); s != reader.samples_end(); ++s) {
-		VCFID.SetInteger(s->c_str(), s - reader.samples_begin());
-	}
-
-	// now see if each sample is genotyped in at least one site
-	std::map<int, bool> g1; // store the samples that haven't found a genotyped site
-	for(int s=0; s<numSamples; s++)
-		g1[s] = 0;
-
-	while(reader >> record) {
-		if (g1.empty())
-			break;
-
-		std::map<int, bool> to_remove;
-		for(std::map<int, bool>::iterator t=g1.begin(); t!=g1.end(); t++) {
-			int s = t->first;
-			if(PreMeta::dosage) {
-#ifdef SUPPORT_DOSAGE
-				const std::string * geno = genoInfo.getString(PreMeta::dosageFlag.c_str(),s);
-				if(!geno)
-					error("cannot find dosage at \"%s\" in VCF!",PreMeta::dosageFlag.c_str());
-				if(*geno != ".")
-					to_remove[s] = 1;
-#endif
-			}
-			else { // gt
-				int numGTs = savvy::get_ploidy(reader, record);
-				bool bad = 0;
-				for(int j = 0; j < numGTs; j++) {
-					if(std::isnan(record[s * numGTs + j])) {
-						bad = 1;
-						break;
-					}
-				}
-				if (!bad)
-					to_remove[s] = 1;
-			}
-		}
-		for(std::map<int, bool>::iterator pm=to_remove.begin(); pm!=to_remove.end(); pm++)
-			g1.erase(pm->first);
-	}
-
-	// now g1 has index of samples that are not genotyped
-	for(int i=0; i<ped.count; i++) {
-		bool phenotyped =false;
-		for(int tr=0;tr<ped.traitNames.Length();tr++) {
-			if(ped[i].isPhenotyped(tr)) {
-				phenotyped=true;
-				break;
-			}
-		}
-		if (!phenotyped)
-			continue;
-		int s;
-		String sample;
-		if(mergedVCFID) {
-			sample = ped[i].famid+"_"+ped[i].pid;
-			s = VCFID.Integer(sample);
-		}
-		else
-			s = VCFID.Integer(ped[i].pid);
-		if (s==-1)
-			continue;
-		if (g1.find(s) != g1.end())
-			continue;
-		if(mergedVCFID) {
-			sampleVCFIDHash.SetInteger(sample,s);
-			samplePEDIDHash.SetInteger(sample,i);
-		}
-		else {
-			sampleVCFIDHash.SetInteger(ped[i].pid,s);
-			samplePEDIDHash.SetInteger(ped[i].pid,i);
-		}
-		genotypedSampleVCF.Push(s);
-	}
-}
-
 void FastTransform::ScreenSampleID(Pedigree & ped,bool useCovariates)
 {
    printf("Friendly reminder:  if your file has a lot of individuals not genotyped, the following process might take very long ...");
    fflush(stdout);
-   if(PreMeta::genoFromVCF || PreMeta::dosage)
-      SelectSamplesVCF(ped,useCovariates);
+   if(PreMeta::genoFromVCF)
+      SelectSamplesVCF<savvy::dense_allele_vector<float>>(PreMeta::vcfInput, ped,useCovariates);
+	 else if (PreMeta::dosage)
+		  SelectSamplesVCF<savvy::dense_dosage_vector<float>>(PreMeta::vcfInput, ped,useCovariates);
    else
       SelectSamplesPED(ped,useCovariates);
    printf("  done.\n");

@@ -72,7 +72,7 @@ void SanityCheck::Check(Pedigree & ped, FILE * log)
       }
 
 
-     savvy::reader reader(PreMeta::vcfInput.c_str());
+     savvy::indexed_reader reader(PreMeta::vcfInput.c_str(), {"", 0 ,0});
       for(const std::string& chrm : reader.chromosomes())
       {
 	 chromosomeVCF.Push(chrm.c_str());

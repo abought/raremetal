@@ -1,19 +1,19 @@
-////////////////////////////////////////////////////////////////////// 
-// KinshipEmp.cpp 
+//////////////////////////////////////////////////////////////////////
+// KinshipEmp.cpp
 // (c) 2012-2013 Shuang Feng, Dajiang Liu, Goncalo Abecasis
-// 
-// This file is distributed as part of the RareMetalWorker source code package   
-// and may not be redistributed in any form, without prior written    
+//
+// This file is distributed as part of the RareMetalWorker source code package
+// and may not be redistributed in any form, without prior written
 
-// modify this file for your own personal use, but modified versions  
-// must retain this copyright notice and must not be distributed.     
-// 
-// Permission is granted for you to use this file to compile RareMetalWorker.    
-// 
-// All computer programs have bugs. Use this file at your own risk.   
-// 
+// modify this file for your own personal use, but modified versions
+// must retain this copyright notice and must not be distributed.
+//
+// Permission is granted for you to use this file to compile RareMetalWorker.
+//
+// All computer programs have bugs. Use this file at your own risk.
+//
 // Wednesday November 28, 2012
-// 
+//
 
 #include "KinshipEmp.h"
 #include "MathMatrix.h"
@@ -411,7 +411,6 @@ void KinshipEmp::SetupVCFAuto(Pedigree & ped, IntArray & genotypedSampleVCF,Stri
   }
   savvy::indexed_reader reader;
   //VcfHeader header;
-  savvy::dense_allele_vector<float> record;
 
   int markerCount = 0;
   //#pragma omp parallel for
@@ -428,14 +427,14 @@ void KinshipEmp::SetupVCFAuto(Pedigree & ped, IntArray & genotypedSampleVCF,Stri
 
     if(PreMeta::dosage)
     {
-#ifdef SUPPORT_DOSAGE
+      savvy::dense_dosage_vector<float> record;
       double mean = 0.0, var_inv = 0.0, maf=0.0;
       int n_=0, nmiss=0;
-      while(reader.readRecord(record))
+      while(reader >> record)
       {
         ++markerCount;
-        chr = record.getChromStr();
-        pos = record.get1BasedPosition();
+        chr = record.chromosome().c_str();
+        pos = record.locus();
 
         if(chr==PreMeta::xLabel)
           if(pos>=PreMeta::Xstart && pos<=PreMeta::Xend)
@@ -443,20 +442,20 @@ void KinshipEmp::SetupVCFAuto(Pedigree & ped, IntArray & genotypedSampleVCF,Stri
 
         mean = 0.0;
         n_=0; nmiss=0;
-        VcfRecordGenotype & genoInfo = record.getGenotypeInfo();
+        //VcfRecordGenotype & genoInfo = record.getGenotypeInfo();
         for (int p = 0; p < genotypedSampleVCF.Length(); p++)
         {
           int s = genotypedSampleVCF[p];
           //fill in genotype vector for this sample
-          const std::string * geno = genoInfo.getString("DS",s);
-          if(*geno == ".")
+          float geno = record[s];
+          if(std::isnan(geno))
           {
-            genotype[p] = _NAN_;
+            genotype[p] = geno;
             nmiss++;
           }
           else
           {
-            genotype[p] = atof((*geno).c_str());
+            genotype[p] = geno;
             mean += genotype[p];
             n_++;
           }
@@ -493,11 +492,10 @@ void KinshipEmp::SetupVCFAuto(Pedigree & ped, IntArray & genotypedSampleVCF,Stri
           }
         }
       }
-      reader.close();
-#endif
     }
     else
     {
+      savvy::dense_allele_vector<float> record;
       double var_inv=_NAN_,mean = 0.0,maf=0.0;
       int n_=0,nmiss=0;
       bool skipSNP = false,skip=false;
@@ -888,7 +886,6 @@ void KinshipEmp::SetupVCFX(Pedigree & ped, IntArray & genotypedSampleVCF, String
   fprintf(log,"Calculating empirical kinshipX matrix ...");
 
   savvy::indexed_reader reader(PreMeta::vcfInput.c_str(), {PreMeta::xLabel.c_str()});
-  savvy::dense_allele_vector<float> record;
 
   int N=0;
   int total_n = genotypedSampleVCF.Length();
@@ -911,11 +908,11 @@ void KinshipEmp::SetupVCFX(Pedigree & ped, IntArray & genotypedSampleVCF, String
   int n_=0, nmiss=0;
   if(PreMeta::dosage)
   {
-#ifdef SUPPORT_DOSAGE
-    while(reader.readRecord(record))
+    savvy::dense_dosage_vector<double> record;
+    while(reader >> record)
     {
-      chr = record.getChromStr();
-      pos = record.get1BasedPosition();
+      chr = record.chromosome().c_str();
+      pos = record.locus();
 
       if(pos<PreMeta::Xstart || pos>PreMeta::Xend)
         continue;
@@ -926,21 +923,21 @@ void KinshipEmp::SetupVCFX(Pedigree & ped, IntArray & genotypedSampleVCF, String
       }
       mean = 0.0;
       n_=0; nmiss=0;
-      VcfRecordGenotype & genoInfo = record.getGenotypeInfo();
+      //VcfRecordGenotype & genoInfo = record.getGenotypeInfo();
       for (int p = 0; p < total_n; p++)
       {
         int s = genotypedSampleVCF[p];
 
         //fill in genotype vector for this sample
-        const std::string * geno = genoInfo.getString("DS",s);
-        if(*geno == ".")
+        double geno = record[s];
+        if(std::isnan(geno))
         {
           genotype[p] = _NAN_;
           nmiss++;
         }
         else
         {
-          genotype[p] = atof((*geno).c_str());
+          genotype[p] = geno;
           mean += genotype[p];
           n_++;
         }
@@ -977,10 +974,10 @@ void KinshipEmp::SetupVCFX(Pedigree & ped, IntArray & genotypedSampleVCF, String
       }
       if(genotype) delete [] genotype;
     }
-#endif
   }
   else
   {
+    savvy::dense_allele_vector<double> record;
     while(reader >> record)
     {
       pos = record.locus();

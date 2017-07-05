@@ -71,7 +71,7 @@ public:
       int numFounders;
       int malehwewarning;
       savvy::indexed_reader reader;
-      savvy::dense_allele_vector<float> record;
+      savvy::variant_vector<std::vector<float>> variant_record;
       //VcfFileReader reader;
       //VcfHeader header;
       //VcfRecord record;
@@ -129,6 +129,7 @@ public:
       void setVarList();
       void updateScoreVar( std::string & chr_str, int & current_score_var, int & current_score_index);
       void updateCovVar( std::string & chr_str, int & current_cov_var, int & current_cov_index);
+      bool readNextVariantRecord();
 };
 
 #endif

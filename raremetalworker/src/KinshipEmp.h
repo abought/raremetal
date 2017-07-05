@@ -24,6 +24,8 @@
 //#include "VcfHeader.h"
 #include "StringHash.h"
 
+#include <savvy/reader.hpp>
+
 
 class KinshipEmp : public Kinship
 {
@@ -57,7 +59,7 @@ class KinshipEmp : public Kinship
       void SetupVCFX(Pedigree & ped, IntArray & genotypedSampleVCF, StringIntHash & samplePEDIDHash, StringIntHash & skippedSNPs,FILE * log);
       void SetupEmpKin(Pedigree & ped, IntArray & genotypedSamplePED, IntArray & genotypedSampleVCF, StringIntHash & samplePEDIDHash, StringIntHash & skippedSNPs,StringArray & chromosomeVCF,FILE * log);
       void SetupEmpKinX(Pedigree & ped, IntArray & genotypedSamplePED, IntArray & genotypedSampleVCF, StringIntHash & samplePEDIDHash, StringIntHash & skippedSNPs,FILE * log);
-void WriteKinship(Pedigree & ped,Matrix & allPairs,IntArray & genotypedSample,bool AUTO,bool VCF,FILE * log);
+      void WriteKinship(Pedigree & ped,Matrix & allPairs,IntArray & genotypedSample,bool AUTO,bool VCF,FILE * log);
 };
 
 #endif

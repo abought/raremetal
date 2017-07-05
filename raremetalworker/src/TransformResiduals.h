@@ -28,6 +28,7 @@
 #include "MathCholesky.h"
 #include "AutoFit.h"
 #include <Eigen/Eigenvalues>
+#include <savvy/savvy.hpp>
 
 class FastTransform
 {
@@ -74,7 +75,8 @@ class FastTransform
 		void Prepare(Pedigree & ped, int traitNum,bool useCovariates,FILE * log,bool shortVersion);
 		void SubSet(Matrix & kin,Pedigree & ped,Matrix & tmp);
 		void SelectSamplesPED(Pedigree & ped,bool useCovariates);
-		void SelectSamplesVCF(Pedigree & ped, bool useCovariates);
+	  template<typename VecType>
+		void SelectSamplesVCF(const String& path, Pedigree & ped, bool useCovariates);
 		void ScreenSampleID(Pedigree & ped, bool useCovariates);
 
 		void TransformPedkin(Pedigree & ped, int traitNum,bool useCovaraites,FILE * log);
@@ -86,5 +88,93 @@ class FastTransform
 		int EigenDecompose(Matrix & matrix_in, Matrix & U, Vector & D);
 		bool FinalizeProducts();
 };
+
+
+
+// 07/08/16 update: read vcf once instead of multiple times
+template<typename VecType>
+void FastTransform::SelectSamplesVCF(const String& path, Pedigree & ped,bool useCovariates)
+{
+	// printf("Selecting useful samples ...\n");
+	savvy::reader reader(path.c_str());
+	VecType record;
+
+
+	int numSamples = reader.samples_end() - reader.samples_begin();
+	totalN=numSamples;
+
+	StringIntHash VCFID;
+	for(auto s = reader.samples_begin(); s != reader.samples_end(); ++s) {
+		VCFID.SetInteger(s->c_str(), s - reader.samples_begin());
+	}
+
+	// now see if each sample is genotyped in at least one site
+	std::map<int, bool> g1; // store the samples that haven't found a genotyped site
+	for(int s=0; s<numSamples; s++)
+		g1[s] = 0;
+
+	while(reader >> record) {
+		if (g1.empty())
+			break;
+
+		std::map<int, bool> to_remove;
+		for(std::map<int, bool>::iterator t=g1.begin(); t!=g1.end(); t++) {
+			int s = t->first;
+			if(std::is_same<savvy::dense_dosage_vector<float>, VecType>::value) {
+				float geno = record[s];
+				if(std::isnan(geno))
+					to_remove[s] = 1;
+			}
+			else { // gt
+				int numGTs = savvy::get_ploidy(reader, record);
+				bool bad = 0;
+				for(int j = 0; j < numGTs; j++) {
+					if(std::isnan(record[s * numGTs + j])) {
+						bad = 1;
+						break;
+					}
+				}
+				if (!bad)
+					to_remove[s] = 1;
+			}
+		}
+		for(std::map<int, bool>::iterator pm=to_remove.begin(); pm!=to_remove.end(); pm++)
+			g1.erase(pm->first);
+	}
+
+	// now g1 has index of samples that are not genotyped
+	for(int i=0; i<ped.count; i++) {
+		bool phenotyped =false;
+		for(int tr=0;tr<ped.traitNames.Length();tr++) {
+			if(ped[i].isPhenotyped(tr)) {
+				phenotyped=true;
+				break;
+			}
+		}
+		if (!phenotyped)
+			continue;
+		int s;
+		String sample;
+		if(mergedVCFID) {
+			sample = ped[i].famid+"_"+ped[i].pid;
+			s = VCFID.Integer(sample);
+		}
+		else
+			s = VCFID.Integer(ped[i].pid);
+		if (s==-1)
+			continue;
+		if (g1.find(s) != g1.end())
+			continue;
+		if(mergedVCFID) {
+			sampleVCFIDHash.SetInteger(sample,s);
+			samplePEDIDHash.SetInteger(sample,i);
+		}
+		else {
+			sampleVCFIDHash.SetInteger(ped[i].pid,s);
+			samplePEDIDHash.SetInteger(ped[i].pid,i);
+		}
+		genotypedSampleVCF.Push(s);
+	}
+}
 
 #endif
