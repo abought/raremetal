@@ -71,13 +71,15 @@ void SanityCheck::Check(Pedigree & ped, FILE * log)
 	 error("Either VCF does not exist or VCF file has to be tabix indexed. Bgzip your vcf file, then use \"tabix -p vcf your.vcf.gz\" to index.\n");
       }
 
+     {
+       savvy::indexed_reader reader(PreMeta::vcfInput.c_str(), {"", 0, 0});
+       for (const std::string& chrm : reader.chromosomes())
+       {
+         chromosomeVCF.Push(chrm.c_str());
+       }
+     }
 
-     savvy::indexed_reader reader(PreMeta::vcfInput.c_str(), {"", 0 ,0});
-      for(const std::string& chrm : reader.chromosomes())
-      {
-	 chromosomeVCF.Push(chrm.c_str());
-      }
-
+     savvy::reader reader(PreMeta::vcfInput.c_str());
       //check if VCF file is empty
       while(reader >> record)
       {

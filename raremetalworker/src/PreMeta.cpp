@@ -1180,7 +1180,7 @@ pdf.CloseFile();
 
 bool PreMeta::GetGenotypeVectorVCFDosage(FastTransform & trans, Pedigree & ped)
 {
- savvy::dense_dosage_vector<float>& dosage_record = dynamic_cast<savvy::dense_dosage_vector<float>&>(variant_record);
+ savvy::dense_dosage_vector<float>& dosage_record = reinterpret_cast<savvy::dense_dosage_vector<float>&>(variant_record);
  bool status = false;
 
  founderMaf = markerMaf = 0.0;
@@ -1339,7 +1339,7 @@ return status;
 
 bool PreMeta::GetGenotypeVectorVCF(FastTransform & trans, Pedigree & ped,SanityCheck & checkData,FILE * log)
 {
-  savvy::dense_allele_vector<float>& gt_record = dynamic_cast<savvy::dense_allele_vector<float>&>(variant_record);
+  savvy::dense_allele_vector<float>& gt_record = reinterpret_cast<savvy::dense_allele_vector<float>&>(variant_record);
   const std::uint16_t ploidy = savvy::get_ploidy(reader, gt_record);
   bool status = false;
 
@@ -2106,8 +2106,8 @@ void PreMeta::updateCovVar( std::string & chr_str, int & current_cov_var, int & 
 bool PreMeta::readNextVariantRecord()
 {
   if (dosage)
-    return (reader >> dynamic_cast<savvy::dense_dosage_vector<float>&>(variant_record)).good();
-  return (reader >> dynamic_cast<savvy::dense_allele_vector<float>&>(variant_record)).good();
+    return (reader >> reinterpret_cast<savvy::dense_dosage_vector<float>&>(variant_record)).good();
+  return (reader >> reinterpret_cast<savvy::dense_allele_vector<float>&>(variant_record)).good();
 }
 
 
