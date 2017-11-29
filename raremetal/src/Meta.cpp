@@ -39,6 +39,9 @@ double  Meta::report_pvalue_cutoff = 1e-06;
 bool Meta::founderAF = false;
 double Meta::HWE = 1e-05;
 double Meta::CALLRATE = 0.95;
+// Placeholder default cutoff values for imputation quality and Minor Allele Counts
+double Meta::filterMAC = 0.0;
+double Meta::filterImpQuality = 0.0;
 double Meta::MAF_cutoff = 0.05;
 int Meta::marker_col = 2;
 int Meta::cov_col = 3;
@@ -163,7 +166,7 @@ void Meta::fitpGammaForSingleStudy( int study)
 	if(file == NULL)
 		error("Cannot open file: %s!\nInput file has to be bgzipped and tabix indexed using the following command:\n bgzip your.summary.file; tabix -c \"#\" -s 1 -b 2 -e 2 your.summary.file.gz\n",scorefile[study].c_str());
 	bool first_line = 1;
-	bool adjust;
+	bool adjust; // Determine which column to read data from based on file format
 	int dist_skipped = 0;
 	int matchonly_skipped = 0;
 	int match_maf_skipped = 0;
@@ -182,8 +185,10 @@ void Meta::fitpGammaForSingleStudy( int study)
 			first_line = 0;
 			continue;
 		}
-		if(buffer.FindChar('#') != -1)
-			continue;
+		if(buffer.FindChar('#') != -1) {
+            // Skip comment lines or headers
+            continue;
+        }
 		StringArray tokens;
 		tokens.AddTokens(buffer, SEPARATORS);
 		if(tokens[0].Find("chr")!=-1)
@@ -210,8 +215,13 @@ void Meta::fitpGammaForSingleStudy( int study)
 		}	
 		if ((tokens[2]=="." && tokens[3]==".") || (tokens[2]==tokens[3] && c1+c2!=0 && c2+c3!=0))
 			continue;
-		if(tokens[8-adjust].AsDouble()<CALLRATE || tokens[9-adjust].AsDouble()<HWE)
-			continue;
+		if(tokens[8-adjust].AsDouble()<CALLRATE || tokens[9-adjust].AsDouble()<HWE || tokens[17-adjust].AsDouble()<filterMAC || tokens[19-adjust].AsDouble()<filterImpQuality) {
+			// Apply filtering cutoffs as specified at the command line: skip lines that do not satisfy these filters
+
+			// Special request for GIANT group: allow additional filtering based on minor imputation count
+			// 	(column 17 in their files) and imputation quality score (column 19 in their files)
+            continue;
+        }
 		double current_AC;
 		int current_N;
 		current_N = c1+c2+c3;
@@ -1445,8 +1455,13 @@ bool Meta::poolSingleRecord( int study, double & current_chisq, int & duplicateS
 	int filter_type = 1;
 	if ((tokens[2]=="." && tokens[3]==".") || (tokens[2]==tokens[3] && c1+c2!=0 && c2+c3!=0))
 		is_fail = 1;
-	if(tokens[8-adjust].AsDouble()<CALLRATE || tokens[9-adjust].AsDouble()<HWE) {
-	// hwe & call rate filter
+	if(tokens[8-adjust].AsDouble()<CALLRATE || tokens[9-adjust].AsDouble()<HWE || tokens[17-adjust].AsDouble()<filterMAC || tokens[19-adjust].AsDouble()<filterImpQuality) {
+		// Apply filtering cutoffs as specified at the command line: skip lines that do not satisfy these filters
+		// This section generates warning messaging
+
+		// Special request for GIANT group: allow additional filtering based on minor imputation count
+		// 	(column 17 in their files) and imputation quality score (column 19 in their files)
+		// hwe & call rate filter
 		is_fail = 1;
 		filter_type = 0;
 	}

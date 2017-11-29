@@ -41,6 +41,8 @@ void WriteLog(FILE * log)
    fprintf(log,"============================\n");
    fprintf(log,"--hwe [%g]\n",Meta::HWE);
    fprintf(log,"--callRate [%g]\n",Meta::CALLRATE);
+   fprintf(log,"--filterMAC [%g]\n",Meta::filterMAC); // minor allele count
+   fprintf(log,"--filterImpQuality [%g]\n",Meta::filterImpQuality); // Imputation quality
    fprintf(log,"\nAssociation Methods:\n");
    fprintf(log,"============================\n");
    fprintf(log,"--burden [%s]\n",Meta::Burden?"true":"false");

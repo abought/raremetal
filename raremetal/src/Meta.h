@@ -40,6 +40,8 @@ class Meta
 	static bool founderAF;
 	static bool dosage;
 	static double CALLRATE;
+	static double filterMAC;
+	static double filterImpQuality;
 	static double report_pvalue_cutoff;
 	static double MAF_cutoff;
 	static double HWE;
