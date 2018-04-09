@@ -238,6 +238,7 @@ void Meta::fitpGammaForSingleStudy(int study)
         }
 
         String chr_pos = tokens[0] + ":" + tokens[1];
+        String mychr_pos = tokens[17];
         String markername = tokens[0] + ":" + tokens[1] + ":" + tokens[2] + ":" + tokens[3];
         bool fail = isDupMarker(tokens[0], chr_pos);
         if (fail)
@@ -556,6 +557,7 @@ void Meta::PoolSummaryStat(GroupFromAnnotation &group)
 
     if (useExactMetaMethod)
     {
+        printf("Default method is useExactMetaMethod \n");
         Ydelta.Dimension(scorefile.Length());
         Ysigma2.Dimension(scorefile.Length());
         for (int s = 0; s < scorefile.Length(); s++)
@@ -599,6 +601,7 @@ void Meta::PoolSummaryStat(GroupFromAnnotation &group)
     // pool stats by reading
     for (int study = 0; study < scorefile.Length(); study++)
     {
+        printf("POOLING stats Method \n");
         int duplicateSNP = 0;
         //Set up data structure to help remove duplicates
         StringIntHash hashToRemoveDuplicates; //hash for skip duplicate markers
@@ -636,7 +639,7 @@ void Meta::PoolSummaryStat(GroupFromAnnotation &group)
         bool adjust;
         tellRvOrRmw(buffer, adjust, marker_col, cov_col);
 //		if (!status)
-//			error("File %s is neither RMW or rvtest score file!\n", filename.c_str());
+//			error("ALERT ALERT ALERT ------ File %s is neither RMW or rvtest score file!\n", filename.c_str());
         ifclose(file);
         FormatAdjust.Push(adjust);
 
@@ -1596,6 +1599,7 @@ void Meta::UpdateStats(int study, String &markerName, double stat, double vstat,
 
 char Meta::GetDirection(String &chr_pos, double effsize, bool flip)
 {
+
     char direction = '+';
     if (flip)
     {
@@ -1728,13 +1732,27 @@ bool Meta::poolSingleRecord(int study, double &current_chisq, int &duplicateSNP,
     }
 
     String chr_pos = tokens[0] + ":" + tokens[1];
-    int direction_idx = directionByChrPos.Integer(chr_pos);
+    //StringArray mytokens;
+    //mytokens.AddTokens(tokens[17],":");
+    //String cpa = mytokens[0]+":"+mytokens[1]+"-"+mytokens[2];
+    //if(mytokens.Length()>3){
+    //String indelAlleles;
+    //for(int st=3; st<mytokens.Length(); st++){
+    //indelAlleles = indelAlleles+"|"+mytokens[st];
+    //}
+    //cpa=cpa+indelAlleles;
+    //printf("Making the indelALlles CPA  = %s \n", cpa.c_str());
+    //}
+    //String cpa  = mytokens[0]+":"+mytokens[1]+"-"+mytokens[2];
+    //String chr_pos = cpa;
 
+    int direction_idx = directionByChrPos.Integer(chr_pos);
     //CHECK duplicate markers
     bool is_dup = isDupMarker(tokens[0], chr_pos);
     if (is_dup)
     {
         duplicateSNP++;
+        printf("FOUND DUPLICATE RECORD AND IT IS SKIPPING THAT RECORD \n");
         fprintf(log, "Warning: variant %s from study %s is skipped because of duplicate records in the same study.\n",
                 chr_pos.c_str(), scorefile[study].c_str());
         return 0;
@@ -1779,6 +1797,7 @@ bool Meta::poolSingleRecord(int study, double &current_chisq, int &duplicateSNP,
     int current_N;
     current_N = c1 + c2 + c3;
     current_AC = 2 * c3 + c2;
+
     String refalt_current = tokens[2] + ':' + tokens[3];
     String markername = chr_pos + ":" + refalt_current;
     if (useExactMetaMethod)
@@ -1787,8 +1806,8 @@ bool Meta::poolSingleRecord(int study, double &current_chisq, int &duplicateSNP,
         double raw_af;
         if (current_N == 0)
         {
-            printf("Warning: effective sample size of %s:%s is zero. Are you using the correct --dosage or --dosageOptionFile?\n\n",
-                   tokens[0].c_str(), tokens[1].c_str());
+            printf("Warning: effective sample size of %s:%s %s is zero. Are you using the correct --dosage or --dosageOptionFile?\n\n",
+                   tokens[0].c_str(), tokens[1].c_str(), chr_pos.c_str());
             raw_af = 0;
         } else
         {
@@ -1805,7 +1824,7 @@ bool Meta::poolSingleRecord(int study, double &current_chisq, int &duplicateSNP,
             addToMapStrVec(variant_nk, study, chr_pos, (double) current_N, scorefile.Length() + 1, current_N);
         }
     }
-
+// Do not bother if not using the Exact method
     bool is_fail = 0;
     int filter_type = 1;
     if ((tokens[2] == "." && tokens[3] == ".") || (tokens[2] == tokens[3] && c1 + c2 != 0 && c2 + c3 != 0))
@@ -1830,6 +1849,7 @@ bool Meta::poolSingleRecord(int study, double &current_chisq, int &duplicateSNP,
     }
 
     //STEP2: check if this position has been hashed. If yes, match alleles; if not, hash position and ref alt alleles.
+
     int marker_idx = directionByChrPos.Integer(chr_pos);
     bool flip = false;
     double u = tokens[13 - adjust].AsDouble();
@@ -1841,7 +1861,9 @@ bool Meta::poolSingleRecord(int study, double &current_chisq, int &duplicateSNP,
     }
     double raw_v = v;
     double raw_u = u;
-    if (marker_idx == -1) //if this position is never hashed before
+    if (marker_idx == -1)
+
+        //if this position is never hashed before, here update the direction ?,update the refalt only with ref and
     {
         UpdateStrIntHash(chr_pos, current_N, recSize); // add size to --altMAF when site is observed
         if (c2 + c3 == 0 || c1 + c2 == 0)
@@ -1858,7 +1880,7 @@ bool Meta::poolSingleRecord(int study, double &current_chisq, int &duplicateSNP,
                 UpdateStrIntHash(chr_pos, SampleSize[study] - current_N, usefulSize);
             }
         } else
-        { //if not monomorphic, then hash in ref:alt allele and update direction with alt direction, update usefulSize if count is different from sampleSize, update usefulAC with alt allele count.
+        {
             refalt.Push(refalt_current);
             char direct = GetDirection(chr_pos, tokens[15 - adjust].AsDouble(), false);
             UpdateDirection(direction_idx, study, direct, chr_pos, false);
@@ -2040,6 +2062,7 @@ bool Meta::isDupMarker(String &chr_str, String &chr_pos)
         hashToRemoveDuplicates.SetInteger(chr_pos, varCount);
     } else
     {
+        printf("FOUND A DUPLICATE chr_str=%s  chr_pos=%s\n", chr_str.c_str(), chr_pos.c_str());
         is_dup = 1;
     }
     return is_dup;
@@ -2086,6 +2109,11 @@ void Meta::setPolyMatch(int &match, String &chr_pos, String &refalt_current, Str
     } else
     {
         match = MatchOneAllele(tokens[3], marker_idx);
+    }
+    if (tokens[3].Find("<") != -1)
+    {
+        printf("Sailaja an insertion to track chrPos = %s, refalt_curr = %s, match = %d \n", chr_pos.c_str(),
+               refalt_current.c_str(), match);
     }
 }
 
@@ -2149,10 +2177,12 @@ void Meta::updateSNPcond(int study, bool flip, int adjust, String &chr_pos, Stri
 void Meta::setPooledAF()
 {
     StringArray chr_AC, unique_chr, SNPname_AC;
-    IntArray pos_AC;
+    //IntArray pos_AC;
+    StringArray pos_AC;
     //get the unique chromosomes
     for (int i = 0; i < directionByChrPos.Capacity(); i++)
     {
+        //String valDirbyPos = directionByChrPos.SlotInUse(i);
         if (!directionByChrPos.SlotInUse(i))
         {
             continue;
@@ -2162,7 +2192,8 @@ void Meta::setPooledAF()
         StringArray tmp;
         tmp.AddTokens(SNPname, ":");
         chr_AC.Push(tmp[0]);
-        pos_AC.Push(tmp[1].AsInteger());
+        pos_AC.Push(tmp[1]);
+        //pos_AC.Push(tmp[1].AsInteger());
         if (directions[idx].Length() < scorefile.Length())
         {
             for (int l = directions[idx].Length(); l < scorefile.Length(); l++)
@@ -2784,6 +2815,7 @@ void Meta::loadSingleStatsInGroup(GroupFromAnnotation &group)
     }
 }
 
+
 //loop through cov matrices of all studies and update cov
 void Meta::loadSingleCovInGroup(GroupFromAnnotation &group)
 {
@@ -2944,6 +2976,7 @@ void Meta::readCovNewFormatLine(int study, StringArray &tokens, int &m)
     markersCov.Push(tokens[cov_col]);
 }
 
+
 // for new format
 // read marker cov then add to vector
 void Meta::addNewFormatCov(int mexp, String &cov_str, Vector &covs)
@@ -3019,6 +3052,7 @@ void Meta::addNewFormatCov(int mexp, String &cov_str, Vector &covs)
         }
     }
 }
+
 
 void Meta::BurdenAssoc(String method, GroupFromAnnotation &group, Vector *&maf, Vector *&stats, Vector *&cond_stats,
                        Matrix *&cov, Matrix *&cond_cov, Vector *&singleEffSize, Vector *&singlePvalue)
@@ -3453,6 +3487,7 @@ void Meta::VTassoc(GroupFromAnnotation &group)
     printf("Done.\n\n");
 }
 
+
 double Meta::VTassocSingle(GroupFromAnnotation &group, Vector &maf_cutoff, IFILE reportOutput, IFILE output, int &g,
                            bool condition, String &method)
 {
@@ -3855,6 +3890,7 @@ double Meta::VTassocSingle(GroupFromAnnotation &group, Vector &maf_cutoff, IFILE
     return pvalue;
 }
 
+
 void Meta::SKATassoc(GroupFromAnnotation &group)
 {
     printf("Performing SKAT ...\n");
@@ -4212,6 +4248,7 @@ void Meta::SKATassoc(GroupFromAnnotation &group)
     printf("Done.\n\n");
 }
 
+// DONOT UNCOMMENT THIS. THIS WAS AN ORIGINAL CODE COMMENTED
 /*
 void Meta::SKAToptimized( GroupFromAnnotation & group)
 {
@@ -4262,7 +4299,7 @@ void Meta::CalculateLambda(Matrix &cov, Vector &weight, double *lambda)
 void Meta::ErrorToLog(const char *msg)
 {
     fprintf(log, "Error [Meta.cpp]: ");
-    fwrite(msg, strlen(msg), 1, log);
+    fprintf(log, msg);
     fprintf(log, "\n");
     error(msg);
 }
